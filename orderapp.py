@@ -2,36 +2,37 @@ import pandas as pd
 import streamlit as st
 from io import BytesIO
 
+# ---------- 데스크탑 전용 설정 ----------
 st.set_page_config(page_title="💰 Order · Promo · Free", layout="wide")
 
 # ---------- 스타일 ----------
 st.markdown("""
 <style>
-    .block-container {padding: 0.5rem 1rem;}
-    html, body, [class*="css"] {font-size: 0.9rem !important;}
-    .main-title {font-weight: 800; font-size: 1.2rem; margin-bottom: 0.3rem;}
-    .section-title {font-weight: 700; font-size: 1.0rem; margin-top: 0.6rem; margin-bottom: 0.3rem;}
-    .subtext {font-size: 0.85rem; color: #555; margin-bottom: 0.8rem;}
+    .block-container {padding: 1.2rem 2rem;}
+    html, body, [class*="css"] {font-size: 1rem !important;}
+    .main-title {font-weight: 800; font-size: 1.4rem; margin-bottom: 0.4rem;}
+    .section-title {font-weight: 700; font-size: 1.1rem; margin-top: 0.8rem; margin-bottom: 0.4rem;}
+    .subtext {font-size: 0.9rem; color: #555; margin-bottom: 1rem;}
 
     .summary-container {
         display: flex;
         justify-content: space-between;
         align-items: center;
         border: 1px solid #ccc;
-        border-radius: 6px;
-        padding: 4px 10px;
-        margin-bottom: 10px;
+        border-radius: 8px;
+        padding: 8px 16px;
+        margin-bottom: 12px;
         background-color: #f8f9fb;
     }
     .summary-item {
         flex: 1;
         text-align: center;
         border-right: 1px solid #ddd;
-        padding: 4px 6px;
+        padding: 8px 10px;
     }
     .summary-item:last-child {border-right: none;}
-    .summary-title {font-weight: 600; font-size: 0.85rem; color: #444;}
-    .summary-value {font-weight: 700; font-size: 0.95rem; color: #000;}
+    .summary-title {font-weight: 600; font-size: 0.9rem; color: #444;}
+    .summary-value {font-weight: 700; font-size: 1rem; color: #000;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -65,7 +66,7 @@ discount_rules = {
     "SMOOTH MOISTURE SILKENING SYSTEM": 30
 }
 
-# ---------- 콜백 함수들 ----------
+# ---------- 콜백 함수 ----------
 def update_discount(category, index, matched_discount, toggle_key_str):
     toggle_value = st.session_state[toggle_key_str]
     new_discount = matched_discount if toggle_value else 0
@@ -140,7 +141,6 @@ for idx, row in cat_df.iterrows():
 
     toggle_key_str = f"disc_{base_key}"
     if matched_discount > 0:
-        toggle_key_str = f"disc_{base_key}"
         cols[5].toggle(
             f"{matched_discount}%",
             key=toggle_key_str,
@@ -188,7 +188,7 @@ if not ordered_df.empty:
             "Order Qty", "Promo Qty", "Free Qty", "Discount %",
             "Order Total", "Promo Total", "Free Total"
         ]],
-        use_container_width=True, height=280
+        use_container_width=True, height=300
     )
 else:
     st.info("No items ordered yet.")
@@ -211,3 +211,4 @@ cols[0].download_button(
 if cols[1].button("🔄 Reset All"):
     st.session_state["category_dfs"] = {}
     st.experimental_rerun()
+
