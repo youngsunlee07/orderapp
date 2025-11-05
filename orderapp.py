@@ -36,6 +36,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* ✅ 모바일 크롬에서 +/- 버튼이 숫자칸보다 오른쪽으로 치우치는 현상 보정 */
+div[data-testid="column"] > div > div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.25rem !important;
+}
+
+/* 수평 오프셋 살짝 왼쪽으로 조정 */
+div[data-testid="column"] button[kind="secondary"] {
+    transform: translateX(-1px);
+}
+
+/* 모바일일 때는 픽셀 보정 더 강하게 */
+@media (max-width: 768px) {
+    div[data-testid="column"] button[kind="secondary"] {
+        transform: translateX(-2px);
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------- 데이터 ----------
 @st.cache_data
 def load_data():
