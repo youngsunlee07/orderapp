@@ -38,25 +38,28 @@ st.markdown("""
 
 st.markdown("""
 <style>
-/* ✅ 모바일에서 +/- 버튼이 오른쪽으로 벗어나는 현상 완벽 교정 */
+/* ✅ 모바일 크롬에서 +/- 버튼 시각 중심 완전 보정 */
 div[data-testid="column"] button[kind="secondary"] {
-    font-family: 'Arial', sans-serif !important;  /* 유니코드 기호 폭 표준화 */
+    font-family: 'Courier New', monospace !important;  /* 균등폭 폰트 */
     font-weight: 700 !important;
-    width: 1.9rem !important;                    /* 상자보다 살짝 좁게 */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 1.9rem !important;
     height: 1.9rem !important;
-    text-align: center !important;
     padding: 0 !important;
     margin: 0 !important;
-    line-height: 1.9rem !important;
-    transform: translateX(-1px);                 /* 시각적으로 왼쪽 1px 이동 */
+    line-height: 1 !important;
+    text-align: center !important;
+    transform: none !important; /* 이전 보정 제거 */
 }
 
-/* 모바일에서는 글자 폭이 다르므로 별도 보정 */
+/* 모바일 화면에서는 버튼 살짝 작게 */
 @media (max-width: 768px) {
     div[data-testid="column"] button[kind="secondary"] {
-        transform: translateX(-1.5px);
         width: 1.8rem !important;
-        line-height: 1.8rem !important;
+        height: 1.8rem !important;
+        font-size: 1rem !important;
     }
 }
 </style>
