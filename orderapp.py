@@ -38,18 +38,25 @@ st.markdown("""
 
 st.markdown("""
 <style>
-/* 🎯 플러스/마이너스 기호의 시각적 정렬 보정 */
+/* ✅ 모바일에서 +/- 버튼이 오른쪽으로 벗어나는 현상 완벽 교정 */
 div[data-testid="column"] button[kind="secondary"] {
-    font-weight: 700 !important;       /* 기호 두께 보정 */
-    letter-spacing: -1px !important;   /* 기호 좌우 폭 줄이기 */
-    transform: translateX(-0.5px);     /* 시각적 중심 왼쪽으로 0.5px 이동 */
+    font-family: 'Arial', sans-serif !important;  /* 유니코드 기호 폭 표준화 */
+    font-weight: 700 !important;
+    width: 1.9rem !important;                    /* 상자보다 살짝 좁게 */
+    height: 1.9rem !important;
+    text-align: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1.9rem !important;
+    transform: translateX(-1px);                 /* 시각적으로 왼쪽 1px 이동 */
 }
 
-/* 모바일일 때 약간 더 보정 */
+/* 모바일에서는 글자 폭이 다르므로 별도 보정 */
 @media (max-width: 768px) {
     div[data-testid="column"] button[kind="secondary"] {
-        transform: translateX(-1px);
-        letter-spacing: -1.2px !important;
+        transform: translateX(-1.5px);
+        width: 1.8rem !important;
+        line-height: 1.8rem !important;
     }
 }
 </style>
