@@ -36,35 +36,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-/* ✅ 모바일 크롬에서 +/- 버튼 시각 중심 완전 보정 */
-div[data-testid="column"] button[kind="secondary"] {
-    font-family: 'Courier New', monospace !important;  /* 균등폭 폰트 */
-    font-weight: 700 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 1.9rem !important;
-    height: 1.9rem !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    line-height: 1 !important;
-    text-align: center !important;
-    transform: none !important; /* 이전 보정 제거 */
-}
-
-/* 모바일 화면에서는 버튼 살짝 작게 */
-@media (max-width: 768px) {
-    div[data-testid="column"] button[kind="secondary"] {
-        width: 1.8rem !important;
-        height: 1.8rem !important;
-        font-size: 1rem !important;
-    }
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ---------- 데이터 ----------
 @st.cache_data
 def load_data():
@@ -155,33 +126,61 @@ for idx, row in cat_df.iterrows():
         if key not in st.session_state:
             st.session_state[key] = int(row[field])
 
-        # 버튼 3분할: -, 값, +
-        btn_cols = cols[col_idx].columns([1, 1, 1])
+        # 버튼 및 수량 표시 영역
+        btn_cols = cols[col_idx].columns([0.8, 1.4, 0.8])  # 🔹 비율 조정: 버튼-값-버튼 균형
 
         # 수량 변수 로컬 복사 (렌더 순서 꼬임 방지)
         qty_val = st.session_state[key]
 
+        # 🔧 반응형 버튼 스타일 (모바일 대응)
+        st.markdown("""
+        <style>
+        /* 모바일 화면에서 버튼 크기 및 여백 조정 */
+        @media (max-width: 600px) {
+            .stButton>button {
+                padding: 0.1rem 0.4rem !important;
+                font-size: 0.9rem !important;
+            }
+            div[data-testid="column"] {
+                padding: 0 2px !important;
+            }
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        # ➖ 버튼
         with btn_cols[0]:
-            if st.button("➖", key=f"{key}_minus"):
+            if st.button("➖", key=f"{key}_minus", use_container_width=True):
                 if qty_val > 0:
                     qty_val -= 1
                     st.session_state[key] = qty_val
                     st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
-                    st.rerun()  # 🔥 즉시 화면 갱신
+                    st.rerun()  # 즉시 화면 갱신
 
+        # 수량 표시 영역
         with btn_cols[1]:
-            # 세션 최신 값 표시
             st.markdown(
-                f"<div style='text-align:center; font-weight:600; border:1px solid #ccc; border-radius:5px; padding:2px 0; background:#f8f9fa;'>{qty_val}</div>",
+                f"""
+                <div style='
+                    text-align:center;
+                    font-weight:600;
+                    border:1px solid #ccc;
+                    border-radius:6px;
+                    padding:4px 0;
+                    background:#f8f9fa;
+                    width:100%;
+                '>{qty_val}</div>
+                """,
                 unsafe_allow_html=True
             )
 
+        # ➕ 버튼
         with btn_cols[2]:
-            if st.button("➕", key=f"{key}_plus"):
+            if st.button("➕", key=f"{key}_plus", use_container_width=True):
                 qty_val += 1
                 st.session_state[key] = qty_val
                 st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
-                st.rerun()  # 🔥 즉시 화면 갱신
+                st.rerun()  # 즉시 화면 갱신
 
     # 할인 토글
     matched_discount = 0
