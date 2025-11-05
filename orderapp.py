@@ -1,55 +1,41 @@
 import pandas as pd
 import streamlit as st
 from io import BytesIO
-from datetime import datetime
 
 st.set_page_config(page_title="💰 Order · Promo · Free", layout="wide")
 
 # ---------- 스타일 ----------
 st.markdown("""
 <style>
-    /* 모바일 대응 - 폰트와 여백 최소화 */
-    .block-container {padding: 0.3rem 0.5rem;}
-    html, body, [class*="css"] {font-size: 0.85rem !important;}
-    input, button, select, textarea {font-size: 0.9rem !important;}
-    .main-title {font-weight: 800; font-size: 1.1rem; margin-bottom: 0.3rem;}
-    .section-title {font-weight: 700; font-size: 0.95rem; margin-top: 0.5rem; margin-bottom: 0.25rem;}
-    .subtext {font-size: 0.8rem; color: #555; margin-bottom: 0.6rem;}
+    .block-container {padding: 0.5rem 1rem;}
+    html, body, [class*="css"] {font-size: 0.9rem !important;}
+    .main-title {font-weight: 800; font-size: 1.2rem; margin-bottom: 0.3rem;}
+    .section-title {font-weight: 700; font-size: 1.0rem; margin-top: 0.6rem; margin-bottom: 0.3rem;}
+    .subtext {font-size: 0.85rem; color: #555; margin-bottom: 0.8rem;}
 
-    /* 모바일 테이블 스크롤 최소화 */
-    [data-testid="stDataFrame"] div[data-testid="stHorizontalBlock"] {
-        overflow-x: auto;
-    }
-    table {
-        font-size: 0.8rem;
-        white-space: nowrap;
-        min-width: 600px;
-    }
-
-    /* Summary Box */
     .summary-container {
         display: flex;
         justify-content: space-between;
         align-items: center;
         border: 1px solid #ccc;
         border-radius: 6px;
-        padding: 3px 6px;
-        margin-bottom: 8px;
+        padding: 4px 10px;
+        margin-bottom: 10px;
         background-color: #f8f9fb;
     }
     .summary-item {
         flex: 1;
         text-align: center;
         border-right: 1px solid #ddd;
-        padding: 2px 4px;
+        padding: 4px 6px;
     }
     .summary-item:last-child {border-right: none;}
-    .summary-title {font-weight: 600; font-size: 0.75rem; color: #444;}
-    .summary-value {font-weight: 700; font-size: 0.9rem; color: #000;}
+    .summary-title {font-weight: 600; font-size: 0.85rem; color: #444;}
+    .summary-value {font-weight: 700; font-size: 0.95rem; color: #000;}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- (이하 기존 코드 동일) ----------
+# ---------- 데이터 ----------
 @st.cache_data
 def load_data():
     try:
@@ -66,9 +52,11 @@ df = load_data()
 if df.empty:
     st.stop()
 
+# ---------- 세션 초기화 ----------
 if "category_dfs" not in st.session_state:
     st.session_state["category_dfs"] = {}
 
+# ---------- 할인 규칙 ----------
 discount_rules = {
     "30 WEAVE WONDER WRAP": 10,
     "30 EYELASH GLUE 1DZ DISPLAY": 16,
@@ -77,6 +65,7 @@ discount_rules = {
     "SMOOTH MOISTURE SILKENING SYSTEM": 30
 }
 
+# ---------- 콜백 함수들 ----------
 def update_discount(category, index, matched_discount, toggle_key_str):
     toggle_value = st.session_state[toggle_key_str]
     new_discount = matched_discount if toggle_value else 0
@@ -86,14 +75,19 @@ def update_qty(category, index, field, key):
     value = st.session_state[key]
     st.session_state["category_dfs"][category].loc[index, field] = value
 
+# ---------- 제목 ----------
 st.markdown("<div class='main-title'>💰 Order · Promo · Free</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtext'>Input Order, Promo, and Free quantities. Discounts can be toggled for eligible products.</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtext'>Input Order, Promo, and Free quantities. Discounts can be toggled for eligible products. Orders remain across categories.</div>", unsafe_allow_html=True)
 
+# ---------- Summary Placeholder ----------
 summary_placeholder = st.empty()
+
+# ---------- Category 선택 ----------
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
 categories = df["Product Category"].unique()
 selected_category = st.selectbox("", categories, label_visibility="collapsed")
 
+# ---------- 카테고리별 세션 데이터 ----------
 if selected_category not in st.session_state["category_dfs"]:
     cat_df = df[df["Product Category"] == selected_category].copy()
     cat_df["Order Qty"] = 0
@@ -104,10 +98,12 @@ if selected_category not in st.session_state["category_dfs"]:
 else:
     cat_df = st.session_state["category_dfs"][selected_category]
 
+# ---------- 기본 할인 적용 ----------
 for key, val in discount_rules.items():
     mask = cat_df["Item"].str.contains(key, case=False, na=False)
     cat_df.loc[mask & (cat_df["Discount %"] == 0), "Discount %"] = val
 
+# ---------- 제품 테이블 ----------
 st.markdown("<div class='section-title'>📋 Products</div>", unsafe_allow_html=True)
 header = st.columns([3, 1, 1, 1, 1, 1])
 for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Discount"]):
@@ -121,6 +117,7 @@ for idx, row in cat_df.iterrows():
     cols[0].markdown(f"**{row['Item']}**<br><sub>{item_id}</sub>", unsafe_allow_html=True)
     cols[1].markdown(f"${row['box_price']:.2f}")
 
+    # Quantity 입력 필드
     for field, col_idx in zip(["Order Qty", "Promo Qty", "Free Qty"], [2, 3, 4]):
         key = f"{field[:3].lower()}_{base_key}"
         cols[col_idx].number_input(
@@ -134,6 +131,7 @@ for idx, row in cat_df.iterrows():
             args=(selected_category, idx, field, key)
         )
 
+    # 할인 토글
     matched_discount = 0
     for k, v in discount_rules.items():
         if k.lower() in f"{row['Product Category']} {row['Item']}".lower():
@@ -142,6 +140,7 @@ for idx, row in cat_df.iterrows():
 
     toggle_key_str = f"disc_{base_key}"
     if matched_discount > 0:
+        toggle_key_str = f"disc_{base_key}"
         cols[5].toggle(
             f"{matched_discount}%",
             key=toggle_key_str,
@@ -189,7 +188,7 @@ if not ordered_df.empty:
             "Order Qty", "Promo Qty", "Free Qty", "Discount %",
             "Order Total", "Promo Total", "Free Total"
         ]],
-        use_container_width=True, height=260
+        use_container_width=True, height=280
     )
 else:
     st.info("No items ordered yet.")
@@ -201,20 +200,14 @@ def to_excel(df):
         df.to_excel(writer, index=False, sheet_name="All Orders")
     return output.getvalue()
 
-if not ordered_df.empty:
-    st.markdown("<div class='section-title'>📤 Export</div>", unsafe_allow_html=True)
-    store_name = st.text_input("🏪 Enter Store Name (optional):", placeholder="e.g. SalonPro, KimBeauty...")
-    now = datetime.now().strftime("%Y-%m-%d")
-    file_name = f"Order_{store_name.strip() or 'Store'}_{now}.xlsx"
-    excel_data = to_excel(ordered_df)
-    
-    cols = st.columns([1, 1])
-    cols[0].download_button(
-        label="💾 Export to Excel",
-        data=excel_data,
-        file_name=file_name,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-    if cols[1].button("🔄 Reset All"):
-        st.session_state["category_dfs"] = {}
-        st.experimental_rerun()
+excel_data = to_excel(ordered_df)
+cols = st.columns([1, 1])
+cols[0].download_button(
+    label="📤 Export to Excel",
+    data=excel_data,
+    file_name="All_Orders.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+)
+if cols[1].button("🔄 Reset All"):
+    st.session_state["category_dfs"] = {}
+    st.experimental_rerun()
