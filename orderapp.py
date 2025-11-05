@@ -118,19 +118,41 @@ for idx, row in cat_df.iterrows():
     cols[0].markdown(f"**{row['Item']}**<br><sub>{item_id}</sub>", unsafe_allow_html=True)
     cols[1].markdown(f"${row['box_price']:.2f}")
 
-    # Quantity 입력 필드
+    # Quantity 입력 필드 (+/- 버튼만으로 조작, 즉시 반영)
     for field, col_idx in zip(["Order Qty", "Promo Qty", "Free Qty"], [2, 3, 4]):
         key = f"{field[:3].lower()}_{base_key}"
-        cols[col_idx].number_input(
-            "",
-            min_value=0,
-            step=1,
-            key=key,
-            value=int(row[field]),
-            label_visibility="collapsed",
-            on_change=update_qty,
-            args=(selected_category, idx, field, key)
-        )
+
+        # 세션 초기화
+        if key not in st.session_state:
+            st.session_state[key] = int(row[field])
+
+        # 버튼 3분할: -, 값, +
+        btn_cols = cols[col_idx].columns([1, 1, 1])
+
+        # 수량 변수 로컬 복사 (렌더 순서 꼬임 방지)
+        qty_val = st.session_state[key]
+
+        with btn_cols[0]:
+            if st.button("➖", key=f"{key}_minus"):
+                if qty_val > 0:
+                    qty_val -= 1
+                    st.session_state[key] = qty_val
+                    st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
+                    st.rerun()  # 🔥 즉시 화면 갱신
+
+        with btn_cols[1]:
+            # 세션 최신 값 표시
+            st.markdown(
+                f"<div style='text-align:center; font-weight:600; border:1px solid #ccc; border-radius:5px; padding:2px 0; background:#f8f9fa;'>{qty_val}</div>",
+                unsafe_allow_html=True
+            )
+
+        with btn_cols[2]:
+            if st.button("➕", key=f"{key}_plus"):
+                qty_val += 1
+                st.session_state[key] = qty_val
+                st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
+                st.rerun()  # 🔥 즉시 화면 갱신
 
     # 할인 토글
     matched_discount = 0
@@ -210,5 +232,5 @@ cols[0].download_button(
 )
 if cols[1].button("🔄 Reset All"):
     st.session_state["category_dfs"] = {}
-    st.experimental_rerun()
+    st.rerun()
 
