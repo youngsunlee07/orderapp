@@ -38,23 +38,18 @@ st.markdown("""
 
 st.markdown("""
 <style>
-/* ✅ 모바일 크롬에서 +/- 버튼이 숫자칸보다 오른쪽으로 치우치는 현상 보정 */
-div[data-testid="column"] > div > div {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.25rem !important;
-}
-
-/* 수평 오프셋 살짝 왼쪽으로 조정 */
+/* 🎯 플러스/마이너스 기호의 시각적 정렬 보정 */
 div[data-testid="column"] button[kind="secondary"] {
-    transform: translateX(-1px);
+    font-weight: 700 !important;       /* 기호 두께 보정 */
+    letter-spacing: -1px !important;   /* 기호 좌우 폭 줄이기 */
+    transform: translateX(-0.5px);     /* 시각적 중심 왼쪽으로 0.5px 이동 */
 }
 
-/* 모바일일 때는 픽셀 보정 더 강하게 */
+/* 모바일일 때 약간 더 보정 */
 @media (max-width: 768px) {
     div[data-testid="column"] button[kind="secondary"] {
-        transform: translateX(-2px);
+        transform: translateX(-1px);
+        letter-spacing: -1.2px !important;
     }
 }
 </style>
