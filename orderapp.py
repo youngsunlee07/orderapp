@@ -94,7 +94,11 @@ summary_placeholder = st.empty()
 # ---------- Category 선택 ----------
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
 categories = df["Product Category"].unique()
-selected_category = st.selectbox("", categories, label_visibility="collapsed")
+selected_category = st.radio(
+    "🗂️ Category",
+    categories,
+    horizontal=True  # 가로 배열 (모바일에 더 보기 좋음)
+)
 
 # ---------- 카테고리별 세션 데이터 ----------
 if selected_category not in st.session_state["category_dfs"]:
