@@ -33,6 +33,18 @@ st.markdown("""
     .summary-item:last-child {border-right: none;}
     .summary-title {font-weight: 600; font-size: 0.9rem; color: #444;}
     .summary-value {font-weight: 700; font-size: 1rem; color: #000;}
+
+    /* number_input 폭 통일 */
+    div[data-baseweb="input"] input {
+        text-align: center;
+        width: 70px !important;
+    }
+    @media (max-width: 768px) {
+        div[data-baseweb="input"] input {
+            width: 55px !important;
+            font-size: 0.9rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -66,15 +78,11 @@ discount_rules = {
     "SMOOTH MOISTURE SILKENING SYSTEM": 30
 }
 
-# ---------- 콜백 함수 ----------
+# ---------- 콜백 ----------
 def update_discount(category, index, matched_discount, toggle_key_str):
     toggle_value = st.session_state[toggle_key_str]
     new_discount = matched_discount if toggle_value else 0
     st.session_state["category_dfs"][category].loc[index, "Discount %"] = new_discount
-
-def update_qty(category, index, field, key):
-    value = st.session_state[key]
-    st.session_state["category_dfs"][category].loc[index, field] = value
 
 # ---------- 제목 ----------
 st.markdown("<div class='main-title'>💰 Order · Promo · Free</div>", unsafe_allow_html=True)
@@ -118,69 +126,30 @@ for idx, row in cat_df.iterrows():
     cols[0].markdown(f"**{row['Item']}**<br><sub>{item_id}</sub>", unsafe_allow_html=True)
     cols[1].markdown(f"${row['box_price']:.2f}")
 
-    # Quantity 입력 필드 (+/- 버튼만으로 조작, 즉시 반영)
+    # ✅ 반응형 + / - 버튼 기반 수량 조절
     for field, col_idx in zip(["Order Qty", "Promo Qty", "Free Qty"], [2, 3, 4]):
         key = f"{field[:3].lower()}_{base_key}"
-
-        # 세션 초기화
         if key not in st.session_state:
             st.session_state[key] = int(row[field])
 
-        # 버튼 및 수량 표시 영역
-        btn_cols = cols[col_idx].columns([0.8, 1.4, 0.8])  # 🔹 비율 조정: 버튼-값-버튼 균형
-
-        # 수량 변수 로컬 복사 (렌더 순서 꼬임 방지)
-        qty_val = st.session_state[key]
-
-        # 🔧 반응형 버튼 스타일 (모바일 대응)
-        st.markdown("""
-        <style>
-        /* 모바일 화면에서 버튼 크기 및 여백 조정 */
-        @media (max-width: 600px) {
-            .stButton>button {
-                padding: 0.1rem 0.4rem !important;
-                font-size: 0.9rem !important;
-            }
-            div[data-testid="column"] {
-                padding: 0 2px !important;
-            }
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-        # ➖ 버튼
-        with btn_cols[0]:
-            if st.button("➖", key=f"{key}_minus", use_container_width=True):
-                if qty_val > 0:
-                    qty_val -= 1
-                    st.session_state[key] = qty_val
-                    st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
-                    st.rerun()  # 즉시 화면 갱신
-
-        # 수량 표시 영역
-        with btn_cols[1]:
-            st.markdown(
-                f"""
-                <div style='
-                    text-align:center;
-                    font-weight:600;
-                    border:1px solid #ccc;
-                    border-radius:6px;
-                    padding:4px 0;
-                    background:#f8f9fa;
-                    width:100%;
-                '>{qty_val}</div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        # ➕ 버튼
-        with btn_cols[2]:
-            if st.button("➕", key=f"{key}_plus", use_container_width=True):
-                qty_val += 1
-                st.session_state[key] = qty_val
-                st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
-                st.rerun()  # 즉시 화면 갱신
+        with cols[col_idx]:
+            c1, c2, c3 = st.columns([1, 2, 1])
+            with c1:
+                if st.button("➖", key=f"{key}_minus", use_container_width=True):
+                    if st.session_state[key] > 0:
+                        st.session_state[key] -= 1
+                        st.session_state["category_dfs"][selected_category].loc[idx, field] = st.session_state[key]
+                        st.rerun()
+            with c2:
+                st.markdown(
+                    f"<div style='text-align:center; border:1px solid #ccc; border-radius:6px; padding:4px 0; background:#f8f9fa; font-weight:600;'>{st.session_state[key]}</div>",
+                    unsafe_allow_html=True
+                )
+            with c3:
+                if st.button("➕", key=f"{key}_plus", use_container_width=True):
+                    st.session_state[key] += 1
+                    st.session_state["category_dfs"][selected_category].loc[idx, field] = st.session_state[key]
+                    st.rerun()
 
     # 할인 토글
     matched_discount = 0
@@ -203,7 +172,11 @@ for idx, row in cat_df.iterrows():
 
 # ---------- Summary ----------
 all_orders = pd.concat(st.session_state["category_dfs"].values(), ignore_index=True)
-ordered_df = all_orders[(all_orders["Order Qty"] > 0) | (all_orders["Promo Qty"] > 0) | (all_orders["Free Qty"] > 0)]
+ordered_df = all_orders[
+    (all_orders["Order Qty"] > 0) |
+    (all_orders["Promo Qty"] > 0) |
+    (all_orders["Free Qty"] > 0)
+]
 
 if not ordered_df.empty:
     ordered_df["Order Total"] = ordered_df["Order Qty"] * ordered_df["box_price"] * (1 - ordered_df["Discount %"] / 100)
@@ -261,4 +234,3 @@ cols[0].download_button(
 if cols[1].button("🔄 Reset All"):
     st.session_state["category_dfs"] = {}
     st.rerun()
-
