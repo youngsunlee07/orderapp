@@ -126,30 +126,23 @@ for idx, row in cat_df.iterrows():
     cols[0].markdown(f"**{row['Item']}**<br><sub>{item_id}</sub>", unsafe_allow_html=True)
     cols[1].markdown(f"${row['box_price']:.2f}")
 
-    # ✅ 반응형 + / - 버튼 기반 수량 조절
+    # ✅ 중복 초기화 방지 - value 제거
     for field, col_idx in zip(["Order Qty", "Promo Qty", "Free Qty"], [2, 3, 4]):
         key = f"{field[:3].lower()}_{base_key}"
+
         if key not in st.session_state:
             st.session_state[key] = int(row[field])
 
         with cols[col_idx]:
-            c1, c2, c3 = st.columns([1, 2, 1])
-            with c1:
-                if st.button("➖", key=f"{key}_minus", use_container_width=True):
-                    if st.session_state[key] > 0:
-                        st.session_state[key] -= 1
-                        st.session_state["category_dfs"][selected_category].loc[idx, field] = st.session_state[key]
-                        st.rerun()
-            with c2:
-                st.markdown(
-                    f"<div style='text-align:center; border:1px solid #ccc; border-radius:6px; padding:4px 0; background:#f8f9fa; font-weight:600;'>{st.session_state[key]}</div>",
-                    unsafe_allow_html=True
-                )
-            with c3:
-                if st.button("➕", key=f"{key}_plus", use_container_width=True):
-                    st.session_state[key] += 1
-                    st.session_state["category_dfs"][selected_category].loc[idx, field] = st.session_state[key]
-                    st.rerun()
+            qty_val = st.number_input(
+                label="",
+                min_value=0,
+                step=1,
+                key=key,
+                label_visibility="collapsed"
+            )
+
+        st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
 
     # 할인 토글
     matched_discount = 0
