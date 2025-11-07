@@ -114,13 +114,13 @@ for category in categories:
 
         # --- 제품 테이블 헤더 ---
         st.markdown("<div class='section-title'>📋 Products</div>", unsafe_allow_html=True)
-        header = st.columns([1.3, 0.5, 1, 1, 1, 0.5])
+        header = st.columns([1.3, 0.5, 1, 1, 1, 0.6])
         for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Discount"]):
             c.markdown(f"**{title}**")
 
         # --- 각 제품 행 렌더링 ---
         for idx, row in cat_df.iterrows():
-            cols = st.columns([1.3, 0.5, 1, 1, 1, 0.5])
+            cols = st.columns([1.3, 0.5, 1, 1, 1, 0.6])
             item_id = row["Item Number"]
             base_key = f"{category}_{item_id}"
 
