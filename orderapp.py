@@ -218,19 +218,20 @@ def to_excel(df):
 
 st.markdown("### 💾 Export Excel File")
 
-# 1️⃣ 입력창
+# 세션 상태 초기화용 키
+if "export_input_key" not in st.session_state:
+    st.session_state["export_input_key"] = "export_filename_input_1"
+
+# 파일명 입력창 (key를 세션에서 제어)
 custom_name = st.text_input(
     "Enter file name (required):",
-    value=st.session_state.get("export_filename_input_value", ""),
+    value="",
     placeholder="e.g., Chicago_Order_Week45",
     label_visibility="visible",
-    key="export_filename_input"
+    key=st.session_state["export_input_key"]
 )
 
-# 입력값을 session에 저장 (리셋 시 함께 제어)
-st.session_state["export_filename_input_value"] = custom_name
-
-# 2️⃣ 스타일
+# ---------- 스타일 ----------
 st.markdown("""
 <style>
 div[data-testid="stTextInput"] {
@@ -260,13 +261,12 @@ button.reset-btn {
 </style>
 """, unsafe_allow_html=True)
 
-# 3️⃣ Export + Reset 로직
+# ---------- Export + Reset 로직 ----------
 if not ordered_df.empty:
     if custom_name.strip():
         file_name = custom_name.strip() + ".xlsx"
         excel_data = to_excel(ordered_df)
 
-        # Export 버튼
         exported = st.download_button(
             label=f"📤 Export to Excel ({file_name})",
             data=excel_data,
@@ -276,11 +276,9 @@ if not ordered_df.empty:
             use_container_width=True
         )
 
-        # ✅ Export 클릭 감지
         if exported:
             st.session_state["export_done"] = True
 
-        # ✅ Export 후 Reset 버튼 표시
         if st.session_state.get("export_done", False):
             st.markdown("---")
             st.success("✅ Export completed! You can reset all orders if you wish.")
@@ -288,7 +286,8 @@ if not ordered_df.empty:
             reset_btn = st.button("🔄 Reset All", key="reset_button", use_container_width=True)
             if reset_btn:
                 st.session_state.clear()
-                st.session_state["export_filename_input_value"] = ""  # 파일명 입력창 비움
+                # ✅ 입력창 캐시 무효화를 위해 키 변경
+                st.session_state["export_input_key"] = f"export_filename_input_{int(pd.Timestamp.now().timestamp())}"
                 st.rerun()
 
     else:
