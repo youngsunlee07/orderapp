@@ -226,7 +226,7 @@ if "export_input_key" not in st.session_state:
 custom_name = st.text_input(
     "Enter file name (required):",
     value="",
-    placeholder="e.g., Chicago_Order_Week45",
+    placeholder="e.g., GA1234",
     label_visibility="visible",
     key=st.session_state["export_input_key"]
 )
