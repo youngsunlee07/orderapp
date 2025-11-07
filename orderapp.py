@@ -34,7 +34,6 @@ st.markdown("""
     .summary-title {font-weight: 600; font-size: 0.9rem; color: #444;}
     .summary-value {font-weight: 700; font-size: 1rem; color: #000;}
 
-    /* number_input 폭 통일 */
     div[data-baseweb="input"] input {
         text-align: center;
         width: 70px !important;
@@ -91,81 +90,75 @@ st.markdown("<div class='subtext'>Input Order, Promo, and Free quantities. Disco
 # ---------- Summary Placeholder ----------
 summary_placeholder = st.empty()
 
-# ---------- Category 선택 ----------
+# ---------- 카테고리 아코디언 ----------
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
 categories = df["Product Category"].unique()
-selected_category = st.radio(
-    "🗂️ Category",
-    categories,
-    horizontal=True  # 가로 배열 (모바일에 더 보기 좋음)
-)
 
-# ---------- 카테고리별 세션 데이터 ----------
-if selected_category not in st.session_state["category_dfs"]:
-    cat_df = df[df["Product Category"] == selected_category].copy()
-    cat_df["Order Qty"] = 0
-    cat_df["Promo Qty"] = 0
-    cat_df["Free Qty"] = 0
-    cat_df["Discount %"] = 0
-    st.session_state["category_dfs"][selected_category] = cat_df
-else:
-    cat_df = st.session_state["category_dfs"][selected_category]
+for category in categories:
+    with st.expander(f"📂 {category}", expanded=False):
+        # --- 카테고리 데이터 준비 ---
+        if category not in st.session_state["category_dfs"]:
+            cat_df = df[df["Product Category"] == category].copy()
+            cat_df["Order Qty"] = 0
+            cat_df["Promo Qty"] = 0
+            cat_df["Free Qty"] = 0
+            cat_df["Discount %"] = 0
+            st.session_state["category_dfs"][category] = cat_df
+        else:
+            cat_df = st.session_state["category_dfs"][category]
 
-# ---------- 기본 할인 적용 ----------
-for key, val in discount_rules.items():
-    mask = cat_df["Item"].str.contains(key, case=False, na=False)
-    cat_df.loc[mask & (cat_df["Discount %"] == 0), "Discount %"] = val
+        # --- 기본 할인 적용 ---
+        for key, val in discount_rules.items():
+            mask = cat_df["Item"].str.contains(key, case=False, na=False)
+            cat_df.loc[mask & (cat_df["Discount %"] == 0), "Discount %"] = val
 
-# ---------- 제품 테이블 ----------
-st.markdown("<div class='section-title'>📋 Products</div>", unsafe_allow_html=True)
-header = st.columns([3, 1, 1, 1, 1, 1])
-for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Discount"]):
-    c.markdown(f"**{title}**")
+        # --- 제품 테이블 헤더 ---
+        st.markdown("<div class='section-title'>📋 Products</div>", unsafe_allow_html=True)
+        header = st.columns([3, 1, 1, 1, 1, 1])
+        for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Discount"]):
+            c.markdown(f"**{title}**")
 
-for idx, row in cat_df.iterrows():
-    cols = st.columns([3, 1, 1, 1, 1, 1])
-    item_id = row["Item Number"]
-    base_key = f"{selected_category}_{item_id}"
+        # --- 각 제품 행 렌더링 ---
+        for idx, row in cat_df.iterrows():
+            cols = st.columns([3, 1, 1, 1, 1, 1])
+            item_id = row["Item Number"]
+            base_key = f"{category}_{item_id}"
 
-    cols[0].markdown(f"**{row['Item']}**<br><sub>{item_id}</sub>", unsafe_allow_html=True)
-    cols[1].markdown(f"${row['box_price']:.2f}")
+            cols[0].markdown(f"**{row['Item']}**<br><sub>{item_id}</sub>", unsafe_allow_html=True)
+            cols[1].markdown(f"${row['box_price']:.2f}")
 
-    # ✅ 중복 초기화 방지 - value 제거
-    for field, col_idx in zip(["Order Qty", "Promo Qty", "Free Qty"], [2, 3, 4]):
-        key = f"{field[:3].lower()}_{base_key}"
+            for field, col_idx in zip(["Order Qty", "Promo Qty", "Free Qty"], [2, 3, 4]):
+                key = f"{field[:3].lower()}_{base_key}"
+                if key not in st.session_state:
+                    st.session_state[key] = int(row[field])
 
-        if key not in st.session_state:
-            st.session_state[key] = int(row[field])
+                with cols[col_idx]:
+                    qty_val = st.number_input(
+                        label="",
+                        min_value=0,
+                        step=1,
+                        key=key,
+                        label_visibility="collapsed"
+                    )
+                st.session_state["category_dfs"][category].loc[idx, field] = qty_val
 
-        with cols[col_idx]:
-            qty_val = st.number_input(
-                label="",
-                min_value=0,
-                step=1,
-                key=key,
-                label_visibility="collapsed"
-            )
+            matched_discount = 0
+            for k, v in discount_rules.items():
+                if k.lower() in f"{row['Product Category']} {row['Item']}".lower():
+                    matched_discount = v
+                    break
 
-        st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
-
-    # 할인 토글
-    matched_discount = 0
-    for k, v in discount_rules.items():
-        if k.lower() in f"{row['Product Category']} {row['Item']}".lower():
-            matched_discount = v
-            break
-
-    toggle_key_str = f"disc_{base_key}"
-    if matched_discount > 0:
-        cols[5].toggle(
-            f"{matched_discount}%",
-            key=toggle_key_str,
-            value=(row["Discount %"] > 0),
-            on_change=update_discount,
-            args=(selected_category, idx, matched_discount, toggle_key_str)
-        )
-    else:
-        cols[5].markdown("-")
+            toggle_key_str = f"disc_{base_key}"
+            if matched_discount > 0:
+                cols[5].toggle(
+                    f"{matched_discount}%",
+                    key=toggle_key_str,
+                    value=(row["Discount %"] > 0),
+                    on_change=update_discount,
+                    args=(category, idx, matched_discount, toggle_key_str)
+                )
+            else:
+                cols[5].markdown("-")
 
 # ---------- Summary ----------
 all_orders = pd.concat(st.session_state["category_dfs"].values(), ignore_index=True)
