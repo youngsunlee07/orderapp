@@ -94,8 +94,23 @@ summary_placeholder = st.empty()
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
 categories = df["Product Category"].unique()
 
+# 열려 있는 카테고리 상태 저장
+if "open_category" not in st.session_state:
+    st.session_state["open_category"] = None
+
 for category in categories:
-    with st.expander(f"📂 {category}", expanded=False):
+    # 이 카테고리가 현재 열려 있어야 하는지 여부
+    expanded = (st.session_state["open_category"] == category)
+
+    # expander 시작
+    with st.expander(f"📂 {category}", expanded=expanded):
+        # 제목 클릭만으로 제어가 안 되므로 내부에 작은 버튼을 둠
+        if st.button(f"🔹 Show {category}", key=f"btn_{category}"):
+            if st.session_state["open_category"] == category:
+                st.session_state["open_category"] = None  # 이미 열려 있으면 닫기
+            else:
+                st.session_state["open_category"] = category  # 새로운 것만 열기
+
         # --- 카테고리 데이터 준비 ---
         if category not in st.session_state["category_dfs"]:
             cat_df = df[df["Product Category"] == category].copy()
@@ -114,13 +129,13 @@ for category in categories:
 
         # --- 제품 테이블 헤더 ---
         st.markdown("<div class='section-title'>📋 Products</div>", unsafe_allow_html=True)
-        header = st.columns([1.2, 0.4, 1, 1, 1, 0.7])
+        header = st.columns([1.2, 0.5, 1, 1, 1, 0.7])
         for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Discount"]):
             c.markdown(f"**{title}**")
 
         # --- 각 제품 행 렌더링 ---
         for idx, row in cat_df.iterrows():
-            cols = st.columns([1.2, 0.4, 1, 1, 1, 0.7])
+            cols = st.columns([1.2, 0.5, 1, 1, 1, 0.7])
             item_id = row["Item Number"]
             base_key = f"{category}_{item_id}"
 
@@ -142,6 +157,7 @@ for category in categories:
                     )
                 st.session_state["category_dfs"][category].loc[idx, field] = qty_val
 
+            # --- 할인 토글 ---
             matched_discount = 0
             for k, v in discount_rules.items():
                 if k.lower() in f"{row['Product Category']} {row['Item']}".lower():
