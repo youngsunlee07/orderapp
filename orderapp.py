@@ -172,28 +172,27 @@ ordered_df = all_orders[
 ]
 
 if not ordered_df.empty:
-    ordered_df["Order Total"] = ordered_df["Order Qty"] * ordered_df["box_price"] * (1 - ordered_df["Discount %"] / 100)
+    # 🔹 1️⃣ 할인 반영 후 금액 계산
+    ordered_df["Order Total"] = (
+        ordered_df["Order Qty"] * ordered_df["box_price"] * (1 - ordered_df["Discount %"] / 100)
+    )
     ordered_df["Promo Total"] = ordered_df["Promo Qty"] * ordered_df["box_price"]
     ordered_df["Free Total"] = ordered_df["Free Qty"] * ordered_df["box_price"]
 
+    # 🔹 2️⃣ 최종 금액 반올림 (소수점 둘째 자리)
+    ordered_df["Order Total"] = ordered_df["Order Total"].round(2)
+    ordered_df["Promo Total"] = ordered_df["Promo Total"].round(2)
+    ordered_df["Free Total"] = ordered_df["Free Total"].round(2)
+
+    # 🔹 3️⃣ 반올림된 금액 기준으로 전체 합산
     total_order = ordered_df["Order Total"].sum()
     total_promo = ordered_df["Promo Total"].sum()
     total_free = ordered_df["Free Total"].sum()
+
     promo_ratio = (total_promo / total_order * 100) if total_order > 0 else 0
     free_ratio = (total_free / total_order * 100) if total_order > 0 else 0
 else:
     total_order = total_promo = total_free = promo_ratio = free_ratio = 0
-
-summary_placeholder.markdown(f"""
-<div class="section-title">📊 Summary</div>
-<div class="summary-container">
-    <div class="summary-item"><div class="summary-title">Order</div><div class="summary-value">${total_order:,.2f}</div></div>
-    <div class="summary-item"><div class="summary-title">Promo</div><div class="summary-value">${total_promo:,.2f}</div></div>
-    <div class="summary-item"><div class="summary-title">Free</div><div class="summary-value">${total_free:,.2f}</div></div>
-    <div class="summary-item"><div class="summary-title">Promo %</div><div class="summary-value">{promo_ratio:.2f}%</div></div>
-    <div class="summary-item"><div class="summary-title">Free %</div><div class="summary-value">{free_ratio:.2f}%</div></div>
-</div>
-""", unsafe_allow_html=True)
 
 # ---------- Ordered Items ----------
 st.markdown("<div class='section-title'>📦 Ordered Items (All Categories)</div>", unsafe_allow_html=True)
@@ -203,7 +202,12 @@ if not ordered_df.empty:
             "Product Category", "Item", "Item Number", "box_price",
             "Order Qty", "Promo Qty", "Free Qty", "Discount %",
             "Order Total", "Promo Total", "Free Total"
-        ]],
+        ]].style.format({
+            "box_price": "${:,.2f}".format,
+            "Order Total": "${:,.2f}".format,
+            "Promo Total": "${:,.2f}".format,
+            "Free Total": "${:,.2f}".format
+        }),
         use_container_width=True, height=300
     )
 else:
@@ -294,3 +298,4 @@ if not ordered_df.empty:
         st.warning("⚠️ Please enter a file name before exporting.")
 else:
     st.info("⚠️ No ordered data to export.")
+
