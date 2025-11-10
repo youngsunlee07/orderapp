@@ -141,7 +141,7 @@ for key, val in discount_rules.items():
 # ---------- 제품 테이블 ----------
 st.markdown("<div class='section-title'>📋 Products</div>", unsafe_allow_html=True)
 header = st.columns([1.2, 0.4, 1, 1, 1, 0.4])
-for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Discount"]):
+for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Disc %"]):
     c.markdown(f"**{title}**")
 
 for idx, row in cat_df.iterrows():
