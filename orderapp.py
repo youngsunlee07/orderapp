@@ -140,12 +140,12 @@ for key, val in discount_rules.items():
 
 # ---------- 제품 테이블 ----------
 st.markdown("<div class='section-title'>📋 Products</div>", unsafe_allow_html=True)
-header = st.columns([1.2, 0.4, 1, 1, 1, 0.6])
+header = st.columns([1.2, 0.4, 1, 1, 1, 0.4])
 for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Discount"]):
     c.markdown(f"**{title}**")
 
 for idx, row in cat_df.iterrows():
-    cols = st.columns([1.2, 0.4, 1, 1, 1, 0.6])
+    cols = st.columns([1.2, 0.4, 1, 1, 1, 0.4])
     item_id = row["Item Number"]
     base_key = f"{selected_category}_{item_id}"
 
@@ -161,23 +161,36 @@ for idx, row in cat_df.iterrows():
             qty_val = st.number_input("", min_value=0, step=1, key=key, label_visibility="collapsed")
         st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
 
-    # 할인 토글
-    matched_discount = 0
-    for k, v in discount_rules.items():
-        if k.lower() in f"{row['Product Category']} {row['Item']}".lower():
-            matched_discount = v
-            break
-    toggle_key_str = f"disc_{base_key}"
-    if matched_discount > 0:
-        cols[5].toggle(
-            f"{matched_discount}%",
-            key=toggle_key_str,
-            value=(row["Discount %"] > 0),
-            on_change=update_discount,
-            args=(selected_category, idx, matched_discount, toggle_key_str)
+    # 🔢 할인 직접 입력란 (버튼 없는 텍스트 입력창 형태)
+    with cols[5]:
+        disc_key = f"disc_input_{selected_category}_{item_id}_{idx}"
+
+        # 기본 할인값 설정 (discount_rules 참고)
+        matched_discount = 0
+        for k, v in discount_rules.items():
+            if k.lower() in f"{row['Product Category']} {row['Item']}".lower():
+                matched_discount = v
+                break
+
+        # 세션 상태 초기화 (문자열 형태)
+        if disc_key not in st.session_state:
+            st.session_state[disc_key] = str(int(row["Discount %"] or matched_discount or 0))
+
+        # 🔹 value 인수 제거 (이제 key만 사용)
+        discount_str = st.text_input(
+            "",
+            key=disc_key,
+            label_visibility="collapsed"
         )
-    else:
-        cols[5].markdown("-")
+
+        # 입력값 숫자 변환
+        try:
+            discount_val = float(discount_str)
+        except ValueError:
+            discount_val = 0.0
+
+        # 반영
+        st.session_state["category_dfs"][selected_category].loc[idx, "Discount %"] = discount_val
 
 # ---------- Summary 계산 ----------
 all_orders = pd.concat(st.session_state["category_dfs"].values(), ignore_index=True)
