@@ -119,8 +119,28 @@ summary_placeholder = st.empty()
 
 # ---------- Category 선택 ----------
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
-categories = df["Product Category"].unique()
-selected_category = st.selectbox("", categories, label_visibility="collapsed")
+
+categories = list(df["Product Category"].unique())
+items_per_column = 6   # 열당 표시 개수 (원하는 대로 변경)
+
+# 단일 선택 상태값 초기화
+if "selected_category" not in st.session_state:
+    st.session_state["selected_category"] = categories[0]
+
+# 열 개수 계산
+import math
+num_cols = math.ceil(len(categories) / items_per_column)
+
+cols = st.columns(num_cols)
+
+# 세로로 채우고 오른쪽으로 이동
+for i, cat in enumerate(categories):
+    col_index = i // items_per_column
+    with cols[col_index]:
+        if st.button(cat, key=f"btn_{cat}", use_container_width=True):
+            st.session_state["selected_category"] = cat
+
+selected_category = st.session_state["selected_category"]
 
 # ---------- 카테고리별 세션 데이터 ----------
 if selected_category not in st.session_state["category_dfs"]:
