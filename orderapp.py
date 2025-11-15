@@ -5,12 +5,11 @@ from io import BytesIO
 # ---------- 페이지 설정 ----------
 st.set_page_config(page_title="💰 Order · Promo · Free", layout="wide")
 
-# ---------- 스타일 ----------
 st.markdown("""
 <style>
     /* 전체 여백 */
     .block-container {
-        padding-top: 8rem !important; /* Summary 고정 공간 확보 */
+        padding-top: 8rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
     }
@@ -19,7 +18,7 @@ st.markdown("""
         font-size: 1rem !important;
     }
 
-    /* 🔹 Summary 고정 */
+    /* Summary 고정 */
     .summary-fixed {
         position: fixed;
         top: 0;
@@ -61,7 +60,7 @@ st.markdown("""
         color: #000;
     }
 
-    /* 🔹 섹션 제목 */
+    /* 섹션 제목 */
     .section-title {
         font-weight: 800;
         font-size: 1.1rem;
@@ -69,11 +68,21 @@ st.markdown("""
         color: #000;
     }
 
-    /* ✅ Category 제목 위로 여백 추가 */
-    .section-title:has(> span:contains("Category")),
     .section-title:contains("Category") {
         margin-top: 2.5rem !important;
     }
+
+    /* 🔧 number_input 오른쪽 스핀 버튼 제거 (정확한 최신 방식) */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none !important;
+        margin: 0 !important;
+    }
+
+    input[type=number] {
+        -moz-appearance: textfield !important; /* Firefox */
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -102,10 +111,10 @@ if "category_dfs" not in st.session_state:
 # ---------- 할인 규칙 ----------
 discount_rules = {
     "30 WEAVE WONDER WRAP": 10,
-    "30 EYELASH GLUE 1DZ DISPLAY": 16,
+    "30 EYELASH GLUE": 16,
     "30 CHIC BOND & REMOVER": 50,
     "VIA TUBE OIL 24PC": 10,
-    "SMOOTH MOISTURE SILKENING SYSTEM": 30
+    "SMOOTH MOISTURE": 30
 }
 
 # ---------- 콜백 ----------
@@ -119,8 +128,36 @@ summary_placeholder = st.empty()
 
 # ---------- Category 선택 ----------
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
-categories = df["Product Category"].unique()
-selected_category = st.selectbox("", categories, label_visibility="collapsed")
+
+categories = list(df["Product Category"].unique())
+items_per_column = 6
+
+if "selected_category" not in st.session_state:
+    st.session_state["selected_category"] = categories[0]
+
+import math
+num_cols = math.ceil(len(categories) / items_per_column)
+cols = st.columns(num_cols)
+
+for i, cat in enumerate(categories):
+    col_index = i // items_per_column
+    with cols[col_index]:
+        if st.button(cat, key=f"btn_{cat}", use_container_width=True):
+            st.session_state["selected_category"] = cat
+
+        # 버튼 색상 (여기 바로 추가)
+        st.markdown(f"""
+        <style>
+        #{'btn_' + cat} {{
+            background-color: #ffe07c !important;  /* 노란색 */
+            color: black !important;
+            border-radius: 6px !important;
+            border: 1px solid #cc9a00 !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+
+selected_category = st.session_state["selected_category"]
 
 # ---------- 카테고리별 세션 데이터 ----------
 if selected_category not in st.session_state["category_dfs"]:
@@ -128,40 +165,59 @@ if selected_category not in st.session_state["category_dfs"]:
     cat_df["Order Qty"] = 0
     cat_df["Promo Qty"] = 0
     cat_df["Free Qty"] = 0
-    cat_df["Discount %"] = 0
+    cat_df["Discount %"] = 0  # 기본은 0, 이후 rule로 덮어씀
+
+    # 🔥 기본 할인 즉시 적용
+    for key, val in discount_rules.items():
+        mask = cat_df["Item"].str.contains(key, case=False, na=False)
+        cat_df.loc[mask, "Discount %"] = val
+
+    # 세션 저장
     st.session_state["category_dfs"][selected_category] = cat_df
+
 else:
     cat_df = st.session_state["category_dfs"][selected_category]
-
-# ---------- 기본 할인 적용 ----------
-for key, val in discount_rules.items():
-    mask = cat_df["Item"].str.contains(key, case=False, na=False)
-    cat_df.loc[mask & (cat_df["Discount %"] == 0), "Discount %"] = val
 
 # ---------- 제품 테이블 ----------
 st.markdown("<div class='section-title'>📋 Products</div>", unsafe_allow_html=True)
 header = st.columns([1.2, 0.4, 1, 1, 1, 0.4])
-for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Discount"]):
+for c, title in zip(header, ["Product", "Price", "Order", "Promo", "Free", "Disc %"]):
     c.markdown(f"**{title}**")
 
+# ---------- 안정화된 반복문 ----------
 for idx, row in cat_df.iterrows():
+
     cols = st.columns([1.2, 0.4, 1, 1, 1, 0.4])
     item_id = row["Item Number"]
-    base_key = f"{selected_category}_{item_id}"
+    base_key = f"{selected_category}_{item_id}_{idx}"
 
+    # 상품명
     cols[0].markdown(f"**{row['Item']}**<br><sub>{item_id}</sub>", unsafe_allow_html=True)
     cols[1].markdown(f"${row['box_price']:.2f}")
 
-    # 수량 입력
+    # ---------- 수량 입력 ----------
     for field, col_idx in zip(["Order Qty", "Promo Qty", "Free Qty"], [2, 3, 4]):
-        key = f"{field[:3].lower()}_{base_key}"
-        if key not in st.session_state:
-            st.session_state[key] = int(row[field])
-        with cols[col_idx]:
-            qty_val = st.number_input("", min_value=0, step=1, key=key, label_visibility="collapsed")
-        st.session_state["category_dfs"][selected_category].loc[idx, field] = qty_val
 
-    # 🔢 할인 직접 입력란 (버튼 없는 텍스트 입력창 형태)
+        qty_key = f"{field[:3].lower()}_{base_key}"
+
+        # 최초 1회 세션 초기화
+        if qty_key not in st.session_state:
+            st.session_state[qty_key] = int(row[field]) if pd.notna(row[field]) else 0
+
+        # number_input은 key만 설정 (value 사용 X)
+        with cols[col_idx]:
+            st.number_input(
+                "",
+                min_value=0,
+                step=1,
+                key=qty_key,
+                label_visibility="collapsed"
+            )
+
+        # DF 업데이트는 항상 session_state 기준
+        st.session_state["category_dfs"][selected_category].loc[idx, field] = st.session_state[qty_key]
+
+    # ---------- 🔢 할인 입력 ----------
     with cols[5]:
         disc_key = f"disc_input_{selected_category}_{item_id}_{idx}"
 
