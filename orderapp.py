@@ -1,88 +1,122 @@
 import pandas as pd
 import streamlit as st
 from io import BytesIO
+from streamlit_js_eval import streamlit_js_eval
+
 
 # ---------- 페이지 설정 ----------
 st.set_page_config(page_title="💰 Order · Promo · Free", layout="wide")
 
 st.markdown("""
 <style>
-    /* 전체 여백 */
-    .block-container {
-        padding-top: 8rem !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-    }
+/* 전체 컨테이너 여백 */
+.block-container {
+    padding-top: 8rem !important; /* Summary 높이만큼 아래로 밀기 */
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+}
 
-    html, body, [class*="css"] {
-        font-size: 1rem !important;
-    }
+/* 기본 글자 크기 */
+html, body, [class*="css"] {
+    font-size: 1rem !important;
+}
 
-    /* Summary 고정 */
-    .summary-fixed {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        z-index: 1000;
-        background-color: #f8f9fb;
-        padding: 12px 8%;
-        border-bottom: 1px solid #ccc;
-        box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.08);
-    }
+/* Summary 고정바 */
+.summary-fixed {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    height: 95px;
+    z-index: 1000;
+    background-color: #f8f9fb;
+    border-bottom: 1px solid #ccc;
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.08);
 
-    .summary-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        padding: 8px 16px;
-        background-color: #fff;
-    }
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 8%;
+}
 
-    .summary-item {
-        flex: 1;
-        text-align: center;
-        border-right: 1px solid #ddd;
-        padding: 8px 10px;
-    }
-    .summary-item:last-child {border-right: none;}
+.summary-spacer {
+    height: 22px; /* 타이틀이 차지했던 자리만큼 여백 */
+}
 
-    .summary-title {
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #444;
-    }
-    .summary-value {
-        font-weight: 700;
-        font-size: 1rem;
-        color: #000;
-    }
+/* Summary 컨테이너 */
+.summary-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px 16px;
+    background-color: #fff;
+    width: 100%;
+}
 
-    /* 섹션 제목 */
-    .section-title {
-        font-weight: 800;
-        font-size: 1.1rem;
-        margin: 1rem 0 0.5rem 0;
-        color: #000;
-    }
+/* Summary 아이템 */
+.summary-item {
+    flex: 1;
+    text-align: center;
+    border-right: 1px solid #ddd;
+    padding: 8px 10px;
+}
+.summary-item:last-child {border-right: none;}
 
-    .section-title:contains("Category") {
-        margin-top: 2.5rem !important;
-    }
+.summary-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #444;
+}
+.summary-value {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #000;
+}
 
-    /* 🔧 number_input 오른쪽 스핀 버튼 제거 (정확한 최신 방식) */
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-        -webkit-appearance: none !important;
-        margin: 0 !important;
-    }
+/* 섹션 타이틀 (숨김) */
+.section-title {
+    visibility: hidden;
+    height: 20px;
+}
 
-    input[type=number] {
-        -moz-appearance: textfield !important; /* Firefox */
-    }
+/* 숫자 입력 스핀 제거 */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+}
+input[type=number] {
+    -moz-appearance: textfield !important;
+}
 
+/* 카테고리 버튼 */
+div.stButton > button {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* 선택 안 된 버튼 */
+div.stButton > button[kind="secondary"] {
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+/* 선택된 버튼 */
+div.stButton > button[kind="primary"] {
+    background-color: #004c9c;
+    border: 1px solid #002b5c;
+    color: #ffffff;
+    box-shadow: 0px 0px 6px rgba(0,0,0,0.3);
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -111,7 +145,7 @@ if "category_dfs" not in st.session_state:
 # ---------- 할인 규칙 ----------
 discount_rules = {
     "30 WEAVE WONDER WRAP": 10,
-    "30 EYELASH GLUE": 16,
+    "30 EYELASH GLUE 1dz": 16,
     "30 CHIC BOND & REMOVER": 50,
     "VIA TUBE OIL 24PC": 10,
     "SMOOTH MOISTURE": 30
@@ -126,38 +160,51 @@ def update_discount(category, index, matched_discount, toggle_key_str):
 # ---------- Summary Placeholder ----------
 summary_placeholder = st.empty()
 
+# ---------- Category 리스트 생성 ----------
+categories = df["Product Category"].dropna().unique().tolist()
+
+# ---------- selected_category 처리 ----------
+if "selected_category" not in st.session_state:
+    st.session_state["selected_category"] = categories[0] if categories else ""
+
+selected_category = st.session_state["selected_category"]
+
 # ---------- Category 선택 ----------
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
 
-categories = list(df["Product Category"].unique())
 items_per_column = 6
-
-if "selected_category" not in st.session_state:
-    st.session_state["selected_category"] = categories[0]
-
-import math
-num_cols = math.ceil(len(categories) / items_per_column)
+num_cols = (len(categories) + items_per_column - 1) // items_per_column
 cols = st.columns(num_cols)
 
 for i, cat in enumerate(categories):
-    col_index = i // items_per_column
-    with cols[col_index]:
-        if st.button(cat, key=f"btn_{cat}", use_container_width=True):
+    col = cols[i // items_per_column]
+
+    cat_up = cat.upper()
+
+    if cat_up.startswith("AE"):
+        icon = "🟥"
+    elif cat_up.startswith("SP"):
+        icon = "🟨"  # << 황토색 / 똥색 느낌
+    elif cat_up.startswith("30"):
+        icon = "🟪"
+    elif "COLOR" in cat_up:
+        icon = "⬛"
+    elif cat_up.startswith("VIA"):
+        icon = "🟦"
+    elif cat_up.startswith("BEARD GUYZ") or cat_up.startswith("HOT WATER BRAID DIPPER JAR"):
+        icon = "🟧"
+    elif any(x in cat_up for x in ["JML", "ROBERT DIAMOND", "SMOOTH MOISTURE", "GROGANICS"]):
+        icon = "⬛"
+    else:
+        icon = "⬜️"
+
+    is_selected = (cat == selected_category)
+    btn_type = "primary" if is_selected else "secondary"
+
+    with col:
+        if st.button(f"{icon} {cat}", key=f"cat_btn_{i}", type=btn_type, use_container_width=True):
             st.session_state["selected_category"] = cat
-
-        # 버튼 색상 (여기 바로 추가)
-        st.markdown(f"""
-        <style>
-        #{'btn_' + cat} {{
-            background-color: #ffe07c !important;  /* 노란색 */
-            color: black !important;
-            border-radius: 6px !important;
-            border: 1px solid #cc9a00 !important;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
-
-selected_category = st.session_state["selected_category"]
+            st.rerun()
 
 # ---------- 카테고리별 세션 데이터 ----------
 if selected_category not in st.session_state["category_dfs"]:
@@ -277,7 +324,7 @@ else:
 # ---------- Summary 출력 ----------
 st.markdown(f"""
 <div class="summary-fixed">
-    <div class="section-title">📊 Summary</div>
+    <div class="summary-spacer"></div> <!-- 숨겨진 타이틀 공간 대체 -->
     <div class="summary-container">
         <div class="summary-item"><div class="summary-title">Order</div><div class="summary-value">${total_order:,.2f}</div></div>
         <div class="summary-item"><div class="summary-title">Promo</div><div class="summary-value">${total_promo:,.2f}</div></div>
