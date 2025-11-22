@@ -117,6 +117,20 @@ div.stButton > button[kind="primary"] {
     color: #ffffff;
     box-shadow: 0px 0px 6px rgba(0,0,0,0.3);
 }
+            
+/* Brand 가로 스크롤 영역 */
+.brand-scroll-wrapper {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    gap: 8px;
+    padding: 4px 0 10px 0;
+}
+
+.brand-scroll-wrapper::-webkit-scrollbar {
+    height: 6px; /* 아이패드에서 너무 크지 않게 */
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -160,43 +174,107 @@ def update_discount(category, index, matched_discount, toggle_key_str):
 # ---------- Summary Placeholder ----------
 summary_placeholder = st.empty()
 
-# ---------- Category 리스트 생성 ----------
-categories = df["Product Category"].dropna().unique().tolist()
+# ---------- Brand + Category 구조 적용 ----------
 
-# ---------- selected_category 처리 ----------
-if "selected_category" not in st.session_state:
+# Brand 아이콘 함수
+def get_brand_icon(brand: str) -> str:
+    b = str(brand).upper()
+    if b.startswith("AE"):
+        return "🟥"
+    elif b.startswith("SP"):
+        return "🟨"
+    elif b.startswith("30"):
+        return "🟪"
+    elif b.startswith("VIA"):
+        return "🟦"
+    elif any(x in b for x in ["JML", "ROBERT"]):
+        return "⬛"
+    elif "COLOR" in b:
+        return "⬜"   # 밝은 회색
+    else:
+        return "🟧"   # OTHER
+
+
+# ---------- Brand 리스트 ----------
+brands = df["Brand"].dropna().unique().tolist()
+
+df["Brand"] = df["Brand"].astype(str).str.strip().str.upper()
+
+brand_order = ["AE", "SP", "30", "VIA", "JML", "COLOR", "OTHER"]
+
+# 1) 우선순위에 있는 브랜드만 순서대로
+ordered_brands = [b for b in brand_order if b in brands]
+
+# 2) brand_order에 없는 기타 브랜드가 있다면 뒤에 붙이기
+others = [b for b in brands if b not in brand_order]
+
+# 최종 브랜드 리스트 (여기서 brands를 다시 설정해야 함)
+brands = ordered_brands + others
+
+if "selected_brand" not in st.session_state:
+    st.session_state["selected_brand"] = brands[0] if brands else ""
+
+selected_brand = st.session_state["selected_brand"]
+
+st.markdown("<div class='section-title'>Brand</div>", unsafe_allow_html=True)
+
+# 🔥 Brand 버튼 가로 스크롤 영역 시작
+st.markdown('<div class="brand-scroll-wrapper">', unsafe_allow_html=True)
+
+cols = st.columns(len(brands))
+for i, brand in enumerate(brands):
+    icon = get_brand_icon(brand)
+    is_selected_brand = (brand == selected_brand)
+    btn_type = "primary" if is_selected_brand else "secondary"
+
+    with cols[i]:
+        if st.button(
+            f"{icon} {brand}",
+            key=f"brand_btn_{i}",
+            type=btn_type,
+            use_container_width=True
+        ):
+            st.session_state["selected_brand"] = brand
+            st.session_state["selected_category"] = ""
+            st.rerun()
+
+# 🔥 Brand 스크롤 영역 끝
+st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ---------- Brand 기반 Category 리스트 ----------
+filtered_df = df[df["Brand"] == selected_brand]
+categories = filtered_df["Product Category"].dropna().unique().tolist()
+
+if ("selected_category" not in st.session_state) or (st.session_state["selected_category"] not in categories):
     st.session_state["selected_category"] = categories[0] if categories else ""
 
 selected_category = st.session_state["selected_category"]
 
-# ---------- Category 선택 ----------
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
 
-items_per_column = 6
-num_cols = (len(categories) + items_per_column - 1) // items_per_column
-cols = st.columns(num_cols)
+# Category 2열 구성
+num_cols = 2 if len(categories) > 1 else 1
+cat_cols = st.columns(num_cols)
 
 for i, cat in enumerate(categories):
-    col = cols[i // items_per_column]
+    col = cat_cols[i % num_cols]
 
     cat_up = cat.upper()
-
     if cat_up.startswith("AE"):
         icon = "🟥"
     elif cat_up.startswith("SP"):
-        icon = "🟨"  # << 황토색 / 똥색 느낌
+        icon = "🟨"
     elif cat_up.startswith("30"):
         icon = "🟪"
     elif "COLOR" in cat_up:
-        icon = "⬛"
+        icon = "⬜"
     elif cat_up.startswith("VIA"):
         icon = "🟦"
-    elif cat_up.startswith("BEARD GUYZ") or cat_up.startswith("HOT WATER BRAID DIPPER JAR"):
-        icon = "🟧"
-    elif any(x in cat_up for x in ["JML", "ROBERT DIAMOND", "SMOOTH MOISTURE", "GROGANICS"]):
+    elif any(x in cat_up for x in ["JML", "ROBERT", "SMOOTH MOISTURE", "GROGANICS"]):
         icon = "⬛"
     else:
-        icon = "⬜️"
+        icon = "🟧"
 
     is_selected = (cat == selected_category)
     btn_type = "primary" if is_selected else "secondary"
@@ -205,6 +283,7 @@ for i, cat in enumerate(categories):
         if st.button(f"{icon} {cat}", key=f"cat_btn_{i}", type=btn_type, use_container_width=True):
             st.session_state["selected_category"] = cat
             st.rerun()
+
 
 # ---------- 카테고리별 세션 데이터 ----------
 if selected_category not in st.session_state["category_dfs"]:
