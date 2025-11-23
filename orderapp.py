@@ -217,24 +217,6 @@ selected_brand = st.session_state["selected_brand"]
 
 st.markdown("<div class='section-title'>Brand</div>", unsafe_allow_html=True)
 
-# ---------- Brand 아이콘 함수 (이미 위에 있다면 중복 정의 X) ----------
-def get_brand_icon(brand: str) -> str:
-    b = str(brand).upper()
-    if b.startswith("AE"):
-        return "🟥"
-    elif b.startswith("SP"):
-        return "🟨"
-    elif b.startswith("30"):
-        return "🟪"
-    elif b.startswith("VIA"):
-        return "🟦"
-    elif any(x in b for x in ["JML", "ROBERT"]):
-        return "⬛"
-    elif "COLOR" in b:
-        return "⬜"
-    else:
-        return "🟧"   # OTHER
-
 # ---------- Brand 라디오 스크롤 스타일 ----------
 st.markdown("""
 <style>
