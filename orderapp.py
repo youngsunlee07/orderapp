@@ -194,7 +194,6 @@ def get_brand_icon(brand: str) -> str:
     else:
         return "🟧"   # OTHER
 
-
 # ---------- Brand 리스트 ----------
 brands = df["Brand"].dropna().unique().tolist()
 
@@ -218,71 +217,159 @@ selected_brand = st.session_state["selected_brand"]
 
 st.markdown("<div class='section-title'>Brand</div>", unsafe_allow_html=True)
 
-# 🔥 Brand 버튼 가로 스크롤 영역 시작
-st.markdown('<div class="brand-scroll-wrapper">', unsafe_allow_html=True)
+# ---------- Brand 아이콘 함수 (이미 위에 있다면 중복 정의 X) ----------
+def get_brand_icon(brand: str) -> str:
+    b = str(brand).upper()
+    if b.startswith("AE"):
+        return "🟥"
+    elif b.startswith("SP"):
+        return "🟨"
+    elif b.startswith("30"):
+        return "🟪"
+    elif b.startswith("VIA"):
+        return "🟦"
+    elif any(x in b for x in ["JML", "ROBERT"]):
+        return "⬛"
+    elif "COLOR" in b:
+        return "⬜"
+    else:
+        return "🟧"   # OTHER
 
-cols = st.columns(len(brands))
-for i, brand in enumerate(brands):
-    icon = get_brand_icon(brand)
-    is_selected_brand = (brand == selected_brand)
-    btn_type = "primary" if is_selected_brand else "secondary"
+# ---------- Brand 라디오 스크롤 스타일 ----------
+st.markdown("""
+<style>
+/* 라디오 전체 wrapper */
+.brand-radio-wrapper {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 6px 0;
+}
 
-    with cols[i]:
-        if st.button(
-            f"{icon} {brand}",
-            key=f"brand_btn_{i}",
-            type=btn_type,
-            use_container_width=True
-        ):
-            st.session_state["selected_brand"] = brand
-            st.session_state["selected_category"] = ""
-            st.rerun()
+/* 내부 라디오 Flex 정렬 */
+.brand-radio-wrapper div[role="radiogroup"] {
+    display: flex;
+    flex-wrap: nowrap !important;
+    gap: 10px;
+}
 
-# 🔥 Brand 스크롤 영역 끝
-st.markdown('</div>', unsafe_allow_html=True)
+/* 라디오 항목 스타일 */
+.brand-radio-wrapper label {
+    padding: 6px 14px;
+    border-radius: 8px;
+    background-color: #f1f1f1;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    white-space: nowrap;
+}
 
+/* 선택된 라디오 스타일 */
+.brand-radio-wrapper label[data-baseweb="radio"]:has(input:checked) {
+    background-color: #004c9c !important;
+    color: #ffffff !important;
+    border: 1px solid #002b5c !important;
+    box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------- Brand 라디오 표시 ----------
+st.markdown("<div class='section-title'>Brand</div>", unsafe_allow_html=True)
+st.markdown('<div class="brand-radio-wrapper">', unsafe_allow_html=True)
+
+# 옵션용 라벨: "🟥 AE", "🟨 SP" 이런 식으로 만들기
+brand_labels = [f"{get_brand_icon(b)} {b}" for b in brands]
+
+# 세션에 기존 선택값이 있으면 그 위치를 index로 사용
+if "selected_brand" in st.session_state and st.session_state["selected_brand"] in brands:
+    default_index = brands.index(st.session_state["selected_brand"])
+else:
+    default_index = 0
+
+selected_label = st.radio(
+    "",
+    brand_labels,
+    horizontal=True,
+    index=default_index,
+    key="brand_radio",
+    label_visibility="collapsed"
+)
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# 라벨에서 다시 순수 브랜드명으로 역매핑
+selected_brand = brands[brand_labels.index(selected_label)]
+
+# 상태 저장 및 카테고리 리셋
+if st.session_state.get("selected_brand") != selected_brand:
+    st.session_state["selected_brand"] = selected_brand
+    st.session_state["selected_category"] = ""
+    st.rerun()
 
 # ---------- Brand 기반 Category 리스트 ----------
 filtered_df = df[df["Brand"] == selected_brand]
 categories = filtered_df["Product Category"].dropna().unique().tolist()
 
+# 🔥 카테고리를 Column-first 로 보이도록 강제 재정렬
+if len(categories) > 1:
+    half = (len(categories) + 1) // 2
+    left_column = categories[:half]
+    right_column = categories[half:]
+else:
+    left_column = categories
+    right_column = []
+
 if ("selected_category" not in st.session_state) or (st.session_state["selected_category"] not in categories):
-    st.session_state["selected_category"] = categories[0] if categories else ""
+    st.session_state["selected_category"] = left_column[0] if left_column else ""
 
 selected_category = st.session_state["selected_category"]
 
 st.markdown("<div class='section-title'>🗂️ Category</div>", unsafe_allow_html=True)
 
-# Category 2열 구성
-num_cols = 2 if len(categories) > 1 else 1
-cat_cols = st.columns(num_cols)
+col1, col2 = st.columns(2) if len(categories) > 1 else (st.columns(1)[0], None)
 
-for i, cat in enumerate(categories):
-    col = cat_cols[i % num_cols]
 
+def get_cat_icon(cat):
     cat_up = cat.upper()
     if cat_up.startswith("AE"):
-        icon = "🟥"
+        return "🟥"
     elif cat_up.startswith("SP"):
-        icon = "🟨"
+        return "🟨"
     elif cat_up.startswith("30"):
-        icon = "🟪"
+        return "🟪"
     elif "COLOR" in cat_up:
-        icon = "⬜"
+        return "⬜"
     elif cat_up.startswith("VIA"):
-        icon = "🟦"
+        return "🟦"
     elif any(x in cat_up for x in ["JML", "ROBERT", "SMOOTH MOISTURE", "GROGANICS"]):
-        icon = "⬛"
+        return "⬛"
     else:
-        icon = "🟧"
+        return "🟧"
 
-    is_selected = (cat == selected_category)
-    btn_type = "primary" if is_selected else "secondary"
 
-    with col:
-        if st.button(f"{icon} {cat}", key=f"cat_btn_{i}", type=btn_type, use_container_width=True):
+# 왼쪽
+with col1:
+    for cat in left_column:
+        icon = get_cat_icon(cat)
+        is_selected = (cat == selected_category)
+        btn_type = "primary" if is_selected else "secondary"
+
+        if st.button(f"{icon} {cat}", key=f"cat_left_{cat}", type=btn_type, use_container_width=True):
             st.session_state["selected_category"] = cat
             st.rerun()
+
+# 오른쪽
+if col2:
+    with col2:
+        for cat in right_column:
+            icon = get_cat_icon(cat)
+            is_selected = (cat == selected_category)
+            btn_type = "primary" if is_selected else "secondary"
+
+            if st.button(f"{icon} {cat}", key=f"cat_right_{cat}", type=btn_type, use_container_width=True):
+                st.session_state["selected_category"] = cat
+                st.rerun()
+
 
 
 # ---------- 카테고리별 세션 데이터 ----------
